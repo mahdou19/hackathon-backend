@@ -29,10 +29,33 @@ router.post("/user/auth", async (req, res) => {
       }
 })
 
+router.get('/auth/verify-session', (req, res) => {
+    const authHeader = req.headers['authorization'];
+  
+    if (!authHeader) {
+      return res.status(401).json({ message: 'Authorization header is required' });
+    }
+  
+    const token = authHeader.split(' ')[1];
+  
+    if (!token) {
+      return res.status(401).json({ message: 'Token is required' });
+    }
+  
+    try {
+      const payload = jwt.verify(token, sessionSecret);
+
+      return res.status(200).json({ valid: true, user: payload });
+    } catch (error) {
+      return res.status(401).json({ valid: false, message: 'Invalid token' });
+    }
+  });
+
+  
 router.post("/nfc/generate-token", async (req, res) => {
     const { email, role, name } = req.body;
 
-    if (!email | !name | !role) {
+    if (!email | !name | !role) {
         return res.status(400).json({ message: 'Required attribut is missing : email | role | name' });
       }
     
