@@ -23,55 +23,111 @@ router.post("/user/auth", async (req, res) => {
           return res.status(400).json({ message: 'User does not exist in the database' });
         }
 
-        const sessionToken = jwt.sign({ userId: payload.userId, role: payload.role }, sessionSecret, { expiresIn: '1h' });
+        const userId = findUser.id  
+        
+        const sessionToken = jwt.sign({ userId, role: payload.role }, sessionSecret, { expiresIn: '1h' });
         
        const identity = await getIdentify(name)
        const code = Math.floor(10 + Math.random() * 90)
 
        const newSession = {
-        sessionToken: sessionToken,
+        sessionToken,
         code,
         date: new Date()
       };
+      
 
       let sessionDocument = await Session.findOne({ identity });
       if (sessionDocument) {
         sessionDocument.session.push(newSession);
       } else {
         sessionDocument = new Session({
+          userId,
           identity: identity,
           session: [newSession]
         });
       }
       await sessionDocument.save();
 
-        return res.status(200).json({ message: "SUCCESS", data : {sessionToken, code }});
+        return res.status(200).json({ message: "SUCCESS", data : { code, sessionToken }});
       } catch (error) {
         return res.status(500).json({ message: error.message });
       }
 })
 
-router.get('/auth/verify-session', (req, res) => {
-    const authHeader = req.headers['authorization'];
+router.get('/auth/verify-identity', async (req, res) => {
+    const { identity } = req.headers
   
-    if (!authHeader) {
-      return res.status(401).json({ message: 'Authorization header is required' });
-    }
-  
-    const token = authHeader.split(' ')[1];
-  
-    if (!token) {
-      return res.status(401).json({ message: 'Token is required' });
+    if (!identity) {
+      return res.status(401).json({ message: 'Identity is required' });
     }
   
     try {
-      const payload = jwt.verify(token, sessionSecret);
+      let sessionDocument = await Session.findOne({ identity });
+      if(!sessionDocument) {
+        return res.status(401).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+      }
+      
+      const { session } = sessionDocument
+      const lastSession = session[session.length - 1];
 
-      return res.status(200).json({ valid: true, user: payload });
+     const payload = jwt.verify(lastSession.sessionToken, sessionSecret);
+     if(!payload) {
+      return res.status(401).json({ message: 'Invalid token' });
+     }
+
+     const identityToken = jwt.sign({ identity }, sessionSecret, { expiresIn: '5m' });
+
+      return res.status(200).json({ identityToken  });
     } catch (error) {
       return res.status(401).json({ valid: false, message: 'Invalid token' });
     }
   });
+
+  router.post('/auth/verify-code', async (req, res) => {
+  
+    const authorization = req.headers['authorization']
+
+  
+    const { code } = req.body
+    if (!code | !authorization) {
+      return res.status(401).json({ message: 'Code | authorization is required' });
+    }
+  const identityToken = authorization.split(" ")[1]
+
+    try {
+     const payload = jwt.verify(identityToken, sessionSecret);
+     const { identity } = payload
+     let sessionDocument = await Session.findOne({ identity });
+   
+      if(!sessionDocument) {
+        return res.status(401).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+      }
+      const { session } = sessionDocument
+      const lastSession = session[session.length - 1]
+  
+      if(code !== lastSession.code ) {
+        const newCode = Math.floor(10 + Math.random() * 90);
+        lastSession.code = newCode;
+        lastSession.date = new Date(); 
+       
+        await sessionDocument.save();
+        return res.status(401).json({ message: "code not correct !" });
+      }
+
+      const userData = await User.findById(sessionDocument.userId);
+
+      return res.status(200).json({ message: 'User successfull connected', data : {
+        sessionToken: lastSession.sessionToken,
+        name: userData.name,
+        role: userData.role
+      }  });
+    } catch (error) {
+      console.error("Error : ", error);
+      return res.status(401).json({ message: error.message });
+    }
+  });
+
 
   
 router.post("/nfc/generate-token", async (req, res) => {
@@ -91,7 +147,7 @@ router.post("/nfc/generate-token", async (req, res) => {
             email,
             role,
           }
-        const nfcToken = jwt.sign(userInfo, sessionSecret, { expiresIn: '8h' });
+        const nfcToken = jwt.sign(userInfo, sessionSecret, { expiresIn: '72h' });
         const newUser = new User(userInfo)
         const saveUser = await newUser.save();
         
