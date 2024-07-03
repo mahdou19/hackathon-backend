@@ -1,6 +1,8 @@
 const router = require("express").Router();
-const User = require("../models/User");
+const User = require("../models/user.model");
+const Session = require("../models/session.model");
 const jwt = require("jsonwebtoken");
+const { getIdentify } = require("../utils/utils");
 
 
 const sessionSecret = process.env.SECRET_KEY;
@@ -15,15 +17,35 @@ router.post("/user/auth", async (req, res) => {
     
     try {
         const payload = jwt.verify(token, nfcSecret);
-        const { email } = payload
+        const { email, name } = payload
         const findUser = await User.findOne({ email });
         if (!findUser) {
           return res.status(400).json({ message: 'User does not exist in the database' });
         }
 
         const sessionToken = jwt.sign({ userId: payload.userId, role: payload.role }, sessionSecret, { expiresIn: '1h' });
+        
+       const identity = await getIdentify(name)
+       const code = Math.floor(10 + Math.random() * 90)
 
-        return res.status(200).json({ message: "SUCCESS", data : {sessionToken }});
+       const newSession = {
+        sessionToken: sessionToken,
+        code,
+        date: new Date()
+      };
+
+      let sessionDocument = await Session.findOne({ identity });
+      if (sessionDocument) {
+        sessionDocument.session.push(newSession);
+      } else {
+        sessionDocument = new Session({
+          identity: identity,
+          session: [newSession]
+        });
+      }
+      await sessionDocument.save();
+
+        return res.status(200).json({ message: "SUCCESS", data : {sessionToken, code }});
       } catch (error) {
         return res.status(500).json({ message: error.message });
       }
@@ -53,10 +75,10 @@ router.get('/auth/verify-session', (req, res) => {
 
   
 router.post("/nfc/generate-token", async (req, res) => {
-    const { email, role, name } = req.body;
+    const { email, role, firstName, lastName } = req.body;
 
-    if (!email | !name | !role) {
-        return res.status(400).json({ message: 'Required attribut is missing : email | role | name' });
+    if (!email | !firstName | !lastName  | !role) {
+        return res.status(400).json({ message: 'Required attribut is missing : email | role | firstName | lastName' });
       }
     
     try {
@@ -65,7 +87,7 @@ router.post("/nfc/generate-token", async (req, res) => {
           return res.status(400).json({ message: "Email user already exist ! " });
         }
         const userInfo = {
-            name,
+            name: `${firstName} ${lastName}`,
             email,
             role,
           }
