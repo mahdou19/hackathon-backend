@@ -11,7 +11,16 @@ const sessionSecret = process.env.SECRET_KEY;
 const nfcSecret = process.env.NFC_SECRET_KEY;
 
 router.post("/nfc/authentication", async (req, res) => {
-    const { token } = req.body;
+    const { tag } = req.body;
+    console.log(tag);
+
+    let text = '';
+    let payload=tag.ndefMessage[0].payload;
+    if (payload.length > 1) {
+        var languageCodeLength = payload[0];
+        text = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
+    }
+    console.log(text);
 
     if (!token) {
         return res.status(400).json({ message: 'Token is required' });
