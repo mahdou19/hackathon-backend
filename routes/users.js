@@ -12,15 +12,12 @@ const nfcSecret = process.env.NFC_SECRET_KEY;
 
 router.post("/nfc/authentication", async (req, res) => {
     const { tag } = req.body;
-    console.log("tag >>>>>>>>>>>>>>>> ", tag);
 
     let token = '';
-    console.log("Avant >>>> ",tag.ndefMessage );
     if(tag.ndefMessage == undefined) {
-      console.log("ici >>>> ",tag.ndefMessage );
       return res.status(400).json({ message: "Tag doesn't identify" });
     }
-    
+
     let payload=tag.ndefMessage[0].payload 
     if (payload.length > 1) {
         var languageCodeLength = payload[0];
