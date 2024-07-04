@@ -12,7 +12,6 @@ const nfcSecret = process.env.NFC_SECRET_KEY;
 
 router.post("/nfc/authentication", async (req, res) => {
     const { tag } = req.body;
-    console.log(tag);
 
     let token = '';
     let payload=tag.ndefMessage[0].payload;
@@ -20,7 +19,6 @@ router.post("/nfc/authentication", async (req, res) => {
         var languageCodeLength = payload[0];
         token = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
     }
-    console.log("token >>> ", token);
 
     if (!token) {
         return res.status(400).json({ message: 'Token is required' });
@@ -74,8 +72,6 @@ router.post("/nfc/authentication", async (req, res) => {
 
 router.get('/auth/verify-identity/:identity', async (req, res) => {
     const { identity } = req.params
-
-    console.log("req > ", req.params);
   
     if (!identity) {
       return res.status(401).json({ message: 'Identity is required' });
@@ -160,6 +156,26 @@ router.post('/auth/verify-code', async (req, res) => {
       return res.status(401).json({ message: error.message });
     }
 });
+
+router.get("/user/data", async (req, res) => {
+  const authorization = req.headers['authorization']
+
+  if (!authorization) {
+    return res.status(401).json({ message: 'Authorization is required' });
+  }
+  const identityToken = authorization.split(" ")[1]
+  
+  try {
+     const payload = jwt.verify(identityToken, sessionSecret);
+     const { userId } = payload
+     let sessionDocument = await Session.findOne({ userId });
+      
+      return res.status(200).json({ message: "SUCCESS", data : { sessionDocument }});
+    } catch (error) {
+      console.error("Error : ", error);
+      return res.status(500).json({ message: error.message });
+    }
+})
 
 
   
