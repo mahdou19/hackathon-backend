@@ -73,7 +73,7 @@ router.post("/nfc/authentication", async (req, res) => {
 
 
 router.get('/auth/verify-identity', async (req, res) => {
-    const { identity } = req.headers
+    const { identity } = req.params
   
     if (!identity) {
       return res.status(401).json({ message: 'Identity is required' });
