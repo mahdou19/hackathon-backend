@@ -98,6 +98,7 @@ router.get('/auth/verify-identity', async (req, res) => {
     }
 });
 
+
 router.post('/auth/verify-code', async (req, res) => {
     const authorization = req.headers['authorization']
 
