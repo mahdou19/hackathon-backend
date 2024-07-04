@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 require("dotenv").config()
 
 
-const port = process.env.PORT
+const port = process.env.PORT || 80;
 
 require("./Database");
 
@@ -21,6 +21,6 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Example app listening on port ${port}`)
 })
