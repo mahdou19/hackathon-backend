@@ -15,16 +15,13 @@ router.post("/nfc/authentication", async (req, res) => {
     console.log("tag >>>>>>>>>>>>>>>> ", tag);
 
     let token = '';
-    let payload
     console.log("Avant >>>> ",tag.ndefMessage );
-    if(tag.ndefMessage.length > 0) {
+    if(tag.ndefMessage == undefined) {
       console.log("ici >>>> ",tag.ndefMessage );
-      payload=tag.ndefMessage[0].payload 
-    }else{
-      console.log("Apres >>>> ",tag.ndefMessage );
       return res.status(400).json({ message: "Tag doesn't identify" });
     }
     
+    let payload=tag.ndefMessage[0].payload 
     if (payload.length > 1) {
         var languageCodeLength = payload[0];
         token = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
