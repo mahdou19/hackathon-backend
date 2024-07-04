@@ -20,7 +20,7 @@ router.post("/nfc/authentication", async (req, res) => {
         var languageCodeLength = payload[0];
         token = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
     }
-    console.log(text);
+    console.log("token >>> ", token);
 
     if (!token) {
         return res.status(400).json({ message: 'Token is required' });
