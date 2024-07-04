@@ -72,7 +72,7 @@ router.post("/nfc/authentication", async (req, res) => {
 })
 
 
-router.get('/auth/verify-identity', async (req, res) => {
+router.get('/auth/verify-identity/:identity', async (req, res) => {
     const { identity } = req.params
 
     console.log("req > ", req.params);
