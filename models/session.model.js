@@ -1,11 +1,14 @@
 const mongoose = require("mongoose");
+const { Status } = require("../types/type");
 
 const SessionItemSchema = new mongoose.Schema(
     {
       sessionId: { type: String, required: true, unique: true },
       sessionToken: { type: String, required: true },
       code: { type: Number, required: true },
-      date: { type: Date, default: Date.now } 
+      arrayCodes: { type: Array, required: true },
+      date: { type: Date, default: Date.now } ,
+      status: { type: String, required: true, default: Status.PENDING },
     }
   );
   

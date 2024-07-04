@@ -2,8 +2,9 @@ const router = require("express").Router();
 const User = require("../models/user.model");
 const Session = require("../models/session.model");
 const jwt = require("jsonwebtoken");
-const { getIdentify, generateUniqueCodes } = require("../utils/utils");
+const { getIdentify, generateUniqueCodes, permuteArray } = require("../utils/utils");
 const { v4: uuidv4 } = require('uuid');
+const { Status } = require("../types/type");
 
 
 const sessionSecret = process.env.SECRET_KEY;
@@ -30,12 +31,14 @@ router.post("/nfc/authentication", async (req, res) => {
         
        const identity = await getIdentify(name)
        const code = Math.floor(10 + Math.random() * 90)
+       const arrayCodes = await generateUniqueCodes(code)
 
        const uuid = uuidv4()
        const newSession = {
         sessionId: uuid,
         sessionToken,
         code,
+        arrayCodes,
         date: new Date()
       };
       
@@ -76,21 +79,24 @@ router.get('/auth/verify-identity', async (req, res) => {
       const { session } = sessionDocument
       const lastSession = session[session.length - 1];
 
+      if(lastSession.status !== Status.PENDING){
+        return res.status(404).json({ message: "Status of session not allows to connect. Please reconnect to scan to badge!" });
+      }
+
      const payload = jwt.verify(lastSession.sessionToken, sessionSecret);
      if(!payload) {
       return res.status(401).json({ message: 'Invalid token' });
      }
 
      const identityToken = jwt.sign({ identity }, sessionSecret, { expiresIn: '5m' });
-
-     const arrayCodes = await generateUniqueCodes(lastSession.code)
-
+     const arrayCodes = await permuteArray(lastSession.arrayCodes)
+    
       return res.status(200).json({ identityToken, codes: arrayCodes  });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ valid: false, message: error.message });
     }
-  });
+});
 
 router.post('/auth/verify-code', async (req, res) => {
     const authorization = req.headers['authorization']
@@ -111,16 +117,24 @@ router.post('/auth/verify-code', async (req, res) => {
       }
       const { session } = sessionDocument
       const lastSession = session[session.length - 1]
+
+      if(lastSession.status !== Status.PENDING){
+        return res.status(404).json({ message: "Status of session not allows to connect. Please reconnect to scan to badge!" });
+      }
   
       if(code !== lastSession.code ) {
-        const newCode = Math.floor(10 + Math.random() * 90);
-        lastSession.code = newCode;
+        lastSession.status = Status.DECLINED;
         lastSession.date = new Date(); 
+        console.log(lastSession);
        
         await sessionDocument.save();
         return res.status(401).json({ message: "The Code does not valid !" });
       }
 
+      lastSession.status = Status.VALIDATED;
+      lastSession.date = new Date(); 
+       
+      await sessionDocument.save();
       const userData = await User.findById(sessionDocument.userId);
 
       return res.status(200).json({ message: 'User successfull connected', data : {

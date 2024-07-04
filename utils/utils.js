@@ -6,6 +6,17 @@ async function getIdentify(name) {
     return `${id1}${id2}`
 }
 
+async function permuteArray(arr) {
+  let newArr = arr.slice();
+
+  for (let i = newArr.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+
+  return newArr;
+}
+
 async function generateUniqueCodes(providedCode) {
     const uniqueCodes = new Set();
     uniqueCodes.add(providedCode);
@@ -14,9 +25,11 @@ async function generateUniqueCodes(providedCode) {
       const newCode = Math.floor(10 + Math.random() * 90); 
       uniqueCodes.add(newCode);
     }
-  
-    return Array.from(uniqueCodes);
-  }
-  
+    let codesArray = Array.from(uniqueCodes);
 
-module.exports = { getIdentify, generateUniqueCodes}
+    let permutedArray = permuteArray(codesArray);
+  
+    return permutedArray;
+  }
+
+module.exports = { getIdentify, generateUniqueCodes, permuteArray}
