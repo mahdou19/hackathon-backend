@@ -169,8 +169,18 @@ router.get("/user/data", async (req, res) => {
      const payload = jwt.verify(identityToken, sessionSecret);
      const { userId } = payload
      let sessionDocument = await Session.findOne({ userId });
+
+     let userData = {}
+     if(sessionDocument){
+      userData = await User.findById({ _id : userId})
+      console.log(userData);
+     }
+
+     const { name, email, role } = userData
       
-      return res.status(200).json({ message: "SUCCESS", data : { sessionDocument }});
+      return res.status(200).json({ message: "SUCCESS", data : {userData: {
+        name, email, role
+      }, sessionDocument }});
     } catch (error) {
       console.error("Error : ", error);
       return res.status(500).json({ message: error.message });
