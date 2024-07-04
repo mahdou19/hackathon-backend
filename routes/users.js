@@ -54,6 +54,7 @@ router.post("/nfc/authentication", async (req, res) => {
 
         return res.status(200).json({ message: "SUCCESS", data : { code, sessionToken }});
       } catch (error) {
+        console.error(error);
         return res.status(500).json({ message: error.message });
       }
 })
@@ -86,7 +87,7 @@ router.get('/auth/verify-identity', async (req, res) => {
 
       return res.status(200).json({ identityToken, codes: arrayCodes  });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res.status(500).json({ valid: false, message: error.message });
     }
   });
