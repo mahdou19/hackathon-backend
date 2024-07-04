@@ -6,4 +6,17 @@ async function getIdentify(name) {
     return `${id1}${id2}`
 }
 
-module.exports = {getIdentify}
+async function generateUniqueCodes(providedCode) {
+    const uniqueCodes = new Set();
+    uniqueCodes.add(providedCode);
+  
+    while (uniqueCodes.size < 5) {
+      const newCode = Math.floor(10 + Math.random() * 90); 
+      uniqueCodes.add(newCode);
+    }
+  
+    return Array.from(uniqueCodes);
+  }
+  
+
+module.exports = { getIdentify, generateUniqueCodes}

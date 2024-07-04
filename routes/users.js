@@ -2,13 +2,14 @@ const router = require("express").Router();
 const User = require("../models/user.model");
 const Session = require("../models/session.model");
 const jwt = require("jsonwebtoken");
-const { getIdentify } = require("../utils/utils");
+const { getIdentify, generateUniqueCodes } = require("../utils/utils");
+const { v4: uuidv4 } = require('uuid');
 
 
 const sessionSecret = process.env.SECRET_KEY;
 const nfcSecret = process.env.NFC_SECRET_KEY;
 
-router.post("/user/auth", async (req, res) => {
+router.post("/nfc/authentication", async (req, res) => {
     const { token } = req.body;
 
     if (!token) {
@@ -30,7 +31,9 @@ router.post("/user/auth", async (req, res) => {
        const identity = await getIdentify(name)
        const code = Math.floor(10 + Math.random() * 90)
 
+       const uuid = uuidv4()
        const newSession = {
+        sessionId: uuid,
         sessionToken,
         code,
         date: new Date()
@@ -64,8 +67,9 @@ router.get('/auth/verify-identity', async (req, res) => {
   
     try {
       let sessionDocument = await Session.findOne({ identity });
+
       if(!sessionDocument) {
-        return res.status(401).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+        return res.status(404).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
       }
       
       const { session } = sessionDocument
@@ -78,22 +82,23 @@ router.get('/auth/verify-identity', async (req, res) => {
 
      const identityToken = jwt.sign({ identity }, sessionSecret, { expiresIn: '5m' });
 
-      return res.status(200).json({ identityToken  });
+     const arrayCodes = await generateUniqueCodes(lastSession.code)
+
+      return res.status(200).json({ identityToken, codes: arrayCodes  });
     } catch (error) {
-      return res.status(401).json({ valid: false, message: 'Invalid token' });
+      console.log(error);
+      return res.status(500).json({ valid: false, message: error.message });
     }
   });
 
-  router.post('/auth/verify-code', async (req, res) => {
-  
+router.post('/auth/verify-code', async (req, res) => {
     const authorization = req.headers['authorization']
 
-  
     const { code } = req.body
     if (!code | !authorization) {
       return res.status(401).json({ message: 'Code | authorization is required' });
     }
-  const identityToken = authorization.split(" ")[1]
+    const identityToken = authorization.split(" ")[1]
 
     try {
      const payload = jwt.verify(identityToken, sessionSecret);
@@ -101,7 +106,7 @@ router.get('/auth/verify-identity', async (req, res) => {
      let sessionDocument = await Session.findOne({ identity });
    
       if(!sessionDocument) {
-        return res.status(401).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+        return res.status(404).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
       }
       const { session } = sessionDocument
       const lastSession = session[session.length - 1]
@@ -112,7 +117,7 @@ router.get('/auth/verify-identity', async (req, res) => {
         lastSession.date = new Date(); 
        
         await sessionDocument.save();
-        return res.status(401).json({ message: "code not correct !" });
+        return res.status(401).json({ message: "The Code does not valid !" });
       }
 
       const userData = await User.findById(sessionDocument.userId);
@@ -126,7 +131,7 @@ router.get('/auth/verify-identity', async (req, res) => {
       console.error("Error : ", error);
       return res.status(401).json({ message: error.message });
     }
-  });
+});
 
 
   
@@ -134,7 +139,7 @@ router.post("/nfc/generate-token", async (req, res) => {
     const { email, role, firstName, lastName } = req.body;
 
     if (!email | !firstName | !lastName  | !role) {
-        return res.status(400).json({ message: 'Required attribut is missing : email | role | firstName | lastName' });
+        return res.status(401).json({ message: 'Required attribut is missing : email | role | firstName | lastName' });
       }
     
     try {
