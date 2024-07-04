@@ -14,11 +14,11 @@ router.post("/nfc/authentication", async (req, res) => {
     const { tag } = req.body;
     console.log(tag);
 
-    let text = '';
+    let token = '';
     let payload=tag.ndefMessage[0].payload;
     if (payload.length > 1) {
         var languageCodeLength = payload[0];
-        text = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
+        token = String.fromCharCode.apply(null, payload.slice(languageCodeLength + 1))
     }
     console.log(text);
 
