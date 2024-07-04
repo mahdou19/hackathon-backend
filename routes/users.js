@@ -74,27 +74,31 @@ router.get('/auth/verify-identity/:identity', async (req, res) => {
     const { identity } = req.params
   
     if (!identity) {
-      return res.status(401).json({ message: 'Identity is required' });
+      return res.status(401).json({ message: 'Identity is required.' });
     }
   
     try {
       let sessionDocument = await Session.findOne({ identity });
 
       if(!sessionDocument) {
-        return res.status(404).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+        return res.status(404).json({ 
+          message: "Identity doesn't have a session. Please verify your identity or reconnect to scan the badge!" 
+        });
       }
       
       const { session } = sessionDocument
       const lastSession = session[session.length - 1];
 
       if(lastSession.status !== Status.PENDING){
-        return res.status(404).json({ message: "Status of session not allows to connect. Please reconnect to scan to badge!" });
+        return res.status(403).json({ 
+          message: "Status of session does not allow connection. Please reconnect to scan the badge!" 
+        });
       }
 
      const payload = jwt.verify(lastSession.sessionToken, sessionSecret);
-     if(!payload) {
+     if (!payload) {
       return res.status(401).json({ message: 'Invalid token' });
-     }
+    }
 
      const identityToken = jwt.sign({ identity }, sessionSecret, { expiresIn: '5m' });
      const arrayCodes = await permuteArray(lastSession.arrayCodes)
@@ -112,7 +116,7 @@ router.post('/auth/verify-code', async (req, res) => {
 
     const { code } = req.body
     if (!code | !authorization) {
-      return res.status(401).json({ message: 'Code | authorization is required' });
+      return res.status(401).json({ message: 'Code and authorization are required' });
     }
     const identityToken = authorization.split(" ")[1]
 
@@ -122,13 +126,15 @@ router.post('/auth/verify-code', async (req, res) => {
      let sessionDocument = await Session.findOne({ identity });
    
       if(!sessionDocument) {
-        return res.status(404).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan to badge!" });
+        return res.status(404).json({ message: "Identity doesn't have a session. Please verify your identity or reconnect to scan the badge!"  });
       }
       const { session } = sessionDocument
       const lastSession = session[session.length - 1]
 
       if(lastSession.status !== Status.PENDING){
-        return res.status(404).json({ message: "Status of session not allows to connect. Please reconnect to scan to badge!" });
+        return res.status(403).json({ 
+          message: "The status of the session does not allow connection. Please reconnect to scan the badge!" 
+        });
       }
   
       if(code !== lastSession.code ) {
@@ -137,7 +143,7 @@ router.post('/auth/verify-code', async (req, res) => {
         console.log(lastSession);
        
         await sessionDocument.save();
-        return res.status(401).json({ message: "The Code does not valid !" });
+        return res.status(401).json({ message: "The code is not valid!" });
       }
 
       lastSession.status = Status.VALIDATED;
@@ -161,7 +167,7 @@ router.get("/user/data", async (req, res) => {
   const authorization = req.headers['authorization']
 
   if (!authorization) {
-    return res.status(401).json({ message: 'Authorization is required' });
+    return res.status(401).json({ message: 'Authorization is required.' });
   }
   const identityToken = authorization.split(" ")[1]
   
@@ -179,7 +185,7 @@ router.get("/user/data", async (req, res) => {
      const { name, email, role } = userData
       
       return res.status(200).json({ message: "SUCCESS", data : {userData: {
-        name, email, role
+        name, email, role 
       }, sessionDocument }});
     } catch (error) {
       console.error("Error : ", error);
