@@ -91,7 +91,7 @@ router.get('/auth/verify-identity/:identity', async (req, res) => {
 
       if(lastSession.status !== Status.PENDING){
         return res.status(403).json({ 
-          message: "Status of session does not allow connection. Please reconnect to scan the badge!" 
+          message: "Rescan your badge" 
         });
       }
 
